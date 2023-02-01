@@ -1,5 +1,6 @@
 # packages
-import chess,cairosvg,chess.svg,time,chess.engine
+import chess,cairosvg,chess.svg,time
+import chess.engine
 from stockfish import Stockfish
 import pyautogui as pg
 from PIL import ImageGrab,ImageTk
@@ -248,18 +249,27 @@ def updateboard():  # Updating the board image after scaning the display with fe
 
 def cheating():
         try:
-            stockf = Stockfish(path="stockfish/stockfish-windows.exe", depth=20,
-                               parameters={"Threads": 1, "Minimum Thinking Time": 7}) #seting up stockfish parameters
+            stockf = Stockfish(path="stockfish/stockfish-windows.exe", depth=10,
+                               parameters={"Threads": 1, "Minimum Thinking Time": 2}) #seting up stockfish parameters
 
             fen = locations_to_fen(recognize_position())
             stockf.set_fen_position(fen) # setting the fen to stockfish
             x = stockf.get_best_move() # getting the best move
             curboard = chess.Board(fen=fen) #using chess module to re-create chessboard
-            with open(f'Board/chessboardsvg.svg', 'w') as fh:
-                fh.write(chess.svg.board(curboard, lastmove=chess.Move.from_uci(x))) # the last played move
-                cairosvg.svg2png(url="Board/chessboardsvg.svg", write_to="Board/chessboardpng.png")
-                stockf.reset_engine_parameters() # reseting the engine at the end so it doesn't crash
-            return x
+            try:
+                with open(f'Board/chessboardsvg.svg', 'w') as fh:
+                    fh.write(chess.svg.board(curboard, lastmove=chess.Move.from_uci(x))) # the last played move
+                    cairosvg.svg2png(url="Board/chessboardsvg.svg", write_to="Board/chessboardpng.png")
+                    stockf.reset_engine_parameters() # reseting the engine at the end so it doesn't crash
+
+                    with chess.engine.SimpleEngine.popen_uci("stockfish/stockfish-windows.exe") as ws:
+                        info = ws.analyse(curboard, chess.engine.Limit(time=0.2))
+                        f = info["score"].relative.cp
+
+                return x,f,fen
+            except:
+                pass
+
 
         except Exception as e:
             print(e)

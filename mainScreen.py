@@ -24,22 +24,23 @@ class mainScr(tk.Tk):   # the main tk window
         self.chessboardl = tk.Label(self.mainPage,image=self.returnimg(r"Board/chessboardpng.png"))#the lable that holds the board image
         self.autoup = threading.Thread(name='autoupdate',target=self.updatebestmove,daemon=True) #running thread to contantly update the image while using the cheat mode
         self.bthread = threading.Thread(name='updatingboard',target=self.updateboardimg,daemon=True) # running thread to update the image inside the label
-
-
+        self.curfen = tk.StringVar()
 
         self.var1 = tk.IntVar() #storing the value of the checkbox
         self.container = tk.Label(self.mainPage)
         self.addbtn = tk.Button(self.container,text='add move',command=self.mmoves)
         self.scnbtn = tk.Button(self.container,text='Scan',command=lambda:chessbot.updateboard())
-        self.combobx = ttk.Combobox(self.container,values=["White","Black"])
+        self.progressbar = ttk.Progressbar(self.container, orient="horizontal", length=200, mode="determinate")
+        self.progressbar['maximum'] = 90
+
         self.bestmov = tk.Label(self.container,text='')
-        self.tickauto = tk.Checkbutton(self.container,variable=self.var1)
+        self.autorun = tk.Checkbutton(self.container,variable=self.var1)
         self.bestmovbtn = tk.Button(self.container,text='Cheat',command=self.bestmove)
         self.mainPage.grid()
 
         #grid the objects
-        self.combobx.grid(row=0,column=0)
-        self.tickauto.grid(row=0,column=1)
+        self.progressbar.grid(row=0,column=0)
+        self.autorun.grid(row=0,column=1)
         self.bestmov.grid(row=0,column=2)
         self.scnbtn.grid(row=0,column=3)
         self.addbtn.grid(row=0,column=4)
@@ -69,17 +70,28 @@ class mainScr(tk.Tk):   # the main tk window
                     print(x)
 
         mwin = tk.Toplevel()
-        fen = tk.Entry(mwin, width=25)
         move = tk.Entry(mwin, width=25)
+        tk.Label(mwin,text=self.curfen.get()).grid(row=3,column=0)
         tk.Button(mwin, text='Show', command=showf).grid(row=2, column=1)
-        tk.Button(mwin, text='Update', command=lambda: writef(fen.get(), move.get())).grid(row=2, column=0)
-        fen.grid(row=0, column=0)
+        tk.Button(mwin, text='Update', command=lambda: writef(self.curfen.get(), move.get())).grid(row=2, column=0)
         move.grid(row=1, column=0)
 
+
+
+    def updateprogress(self,ev):
+        ev = max(0, min(100, int(ev / 50 + 50)))
+        self.progressbar["value"] = ev
+        self.progressbar.update()
+
     def bestmove(self):
-        x = chessbot.cheating()
+        x,d,cfen = chessbot.cheating()
+
         self.bestmov.configure(text=x)
-        print(x)
+        self.curfen.set(cfen)
+
+        self.updateprogress(d)
+
+        print(x,'\n',self.curfen.get(),"\n")
 
     @memoize
     def updateboardimg(self):
@@ -88,6 +100,7 @@ class mainScr(tk.Tk):   # the main tk window
                 xfile = self.returnimg(r"Board/chessboardpng.png")
                 self.chessboardl.configure(image=xfile)
                 self.chessboardl.image = xfile
+
             except:
                 pass
             time.sleep(0.5)
@@ -96,9 +109,12 @@ class mainScr(tk.Tk):   # the main tk window
         while True:  #using a thread to constantly check if the tickbox is marked
             while self.var1.get()  == 1:
 
-                x = chessbot.cheating()
+                x,d,cfen = chessbot.cheating()
+                self.curfen.set(cfen)
                 self.bestmov.configure(text=x)
-                time.sleep(7)
+                self.updateprogress(d)
+
+                time.sleep(4.4)
 
             time.sleep(0.5)
 
